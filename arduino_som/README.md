@@ -11,7 +11,7 @@ Firmware responsável por tocar músicas no Shield MP3, controlar relés e receb
 
 | Pino | Função/Dispositivo | Detalhes |
 |-----:|---------------------|----------|
-| D2   | RX (link Master)    | SoftwareSerial RX (do Mega Serial1 TX1=D18) |
+| D10  | RX (link Master)   | SoftwareSerial RX (do Mega Serial1 TX1=D18) |
 | D4   | TX (link Master)    | SoftwareSerial TX (para Mega Serial1 RX1=D19) |
 | D3   | Relé arv1A          | Saída |
 | D5   | Relé arv2A          | Saída |
@@ -19,12 +19,7 @@ Firmware responsável por tocar músicas no Shield MP3, controlar relés e receb
 | D7   | Relé arv1B          | Saída |
 | D8   | Relé arv2B          | Saída |
 | D9   | Relé arv3B          | Saída |
-| A0   | Relé chuva          | Saída (digital) |
-| A1   | Relé casa1          | Saída (digital) |
-| A2   | Relé casa2          | Saída (digital) |
-| A3   | Relé casa3          | Saída (digital) |
-| A4   | Relé casa4          | Saída (digital) |
-| A5   | Relé projetor       | Saída (digital) |
+| —    | —                   | — |
 
 Observação: A ligação do Shield MP3 permanece igual ao projeto do ano passado (SPI/UART conforme seu hardware). Não alteramos pinos do shield.
 
@@ -40,6 +35,7 @@ Uma linha por comando, terminada por \n. Case-insensitive.
 - VOL V
 - LIGARELE X
 - DESLIGARELE X
+- Pabcdef (7 chars) → controle em massa dos 6 relés (a..f ∈ {0,1} mapeando Relé1..Relé6)
 - PADRAO_ALTO
 - PADRAO_BAIXO
 
@@ -52,7 +48,7 @@ Exemplos:
 
 ## Integração com o Master (Mega)
 - Mega deve usar Serial1 (TX1=D18, RX1=D19), 115200 bps.
-- Ligações: TX1 (Mega) → D2 (UNO), RX1 (Mega) ← D4 (UNO), GND comum.
+- Ligações: TX1 (Mega) → D10 (UNO), RX1 (Mega) ← D4 (UNO), GND comum.
 
 ## Build e Upload
 1. Abra o projeto no Arduino IDE
@@ -61,4 +57,4 @@ Exemplos:
 
 ## Notas
 - Mantivemos o uso de `Serial` para conversar com o Shield MP3, conforme o projeto anterior.
-- A comunicação com o Master foi isolada em SoftwareSerial (D2/D4) para não interferir no upload via USB.
+- A comunicação com o Master foi isolada em SoftwareSerial (D10/D4) para não interferir no upload via USB.

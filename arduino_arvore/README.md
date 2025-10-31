@@ -25,6 +25,7 @@ Firmware de um dispositivo Slave (exemplo) que recebe comandos do Master e execu
 | D5   | Módulo de Relés (CH4) | Relé 4         | Saída digital              |
 | D6   | Módulo de Relés (CH5) | Relé 5         | Saída digital              |
 | D7   | Módulo de Relés (CH6) | Relé 6         | Saída digital              |
+| D9   | Emissor IR (Keyes IR) | IR SEND        | Usado pela IRremote para TX |
 
 ## Arquivos
 - **arduino_arvore.ino**: ponto de entrada do firmware do Slave de exemplo.
@@ -37,6 +38,7 @@ Firmware de um dispositivo Slave (exemplo) que recebe comandos do Master e execu
 ## Observações
 - Biblioteca necessária: RadioHead (RH_ASK). Instale pelo Library Manager do Arduino IDE.
 - A taxa de bits deve coincidir com o Master: `BIT_RATE = 2000` bps (ajustável em ambos se necessário).
+ - Biblioteca necessária para IR: **IRremote** (versões recentes usam `#include <IRremote.hpp>`). Pino TX configurado: **D9**.
 
 ## Mensagens RF suportadas
 - `11000` → imprime: `árvore low`
@@ -59,3 +61,13 @@ Firmware de um dispositivo Slave (exemplo) que recebe comandos do Master e execu
 - Definir pinos e configuração do módulo de rádio.
 - Implementar tratador de mensagens e execução de efeitos.
 - Adicionar logs/serial para depuração.
+
+## Protocolo RF para Refletor (IR)
+- Mensagens iniciando com `L` controlam o refletor via IR (NEC, addr `0xEF00`).
+- Formato: `L<COMANDO>` onde `<COMANDO>` ∈ {`ON`, `OFF`, `BRILHO+`, `BRILHO-`, `R`, `G`, `B`, `W`, `FLASH`, `STROBE`, `FADE`, `SMOOTH`}.
+
+### Exemplos
+- `LON` → liga refletor.
+- `LOFF` → desliga refletor.
+- `LBRILHO+` → aumenta brilho.
+- `LFADE` → efeito FADE.
