@@ -1,13 +1,20 @@
 #define IR_SEND_PIN 9
-#include <IRremote.hpp>
+#include <IRremote.h>
 #include <RH_ASK.h>
 #include <SPI.h>
 
+bool enableLogs = true;
+bool enableAck = false;
+
 const uint8_t RELAY_PINS[6] = {2, 3, 4, 5, 6, 7};
 const uint8_t RX_PIN = 11;
-const uint16_t BIT_RATE = 2000;
+const uint16_t BIT_RATE = 4000;
 
 RH_ASK driver(BIT_RATE, RX_PIN, 12, 10, false);
+
+String lastIRCmd = "";
+unsigned long lastIRMs = 0;
+const unsigned long IR_DEBOUNCE_MS = 80;
 
 bool refletor(String command) {
   String s = command;
@@ -28,6 +35,7 @@ bool refletor(String command) {
   else if (s == "FADE") cmd = 0x13;
   else if (s == "SMOOTH") cmd = 0x17;
   else return false;
+  if (enableLogs) { Serial.print("ir tx:"); Serial.println(s); }
   IrSender.sendNEC(addr, (uint8_t)cmd, 0);
   return true;
 }
@@ -38,6 +46,7 @@ void sendAck(const String &payload) {
   size_t n = msg.length();
   if (n >= sizeof(buf)) return;
   msg.toCharArray(buf, sizeof(buf));
+  if (enableLogs) { Serial.print("tx: "); Serial.println(msg); }
   driver.send((uint8_t*)buf, strlen(buf));
   driver.waitPacketSent();
 }
@@ -45,11 +54,12 @@ void sendAck(const String &payload) {
 void setup() {
   Serial.begin(9600);
   while (!Serial) {}
+  if (enableLogs) Serial.println("arvore iniciado");
   for (uint8_t i = 0; i < 6; i++) {
     pinMode(RELAY_PINS[i], OUTPUT);
     digitalWrite(RELAY_PINS[i], LOW);
   }
-  IrSender.begin(IR_SEND_PIN, ENABLE_LED_FEEDBACK);
+  IrSender.begin(IR_SEND_PIN);
   driver.init();
 }
 
@@ -62,9 +72,16 @@ void loop() {
     String msg = String((char*)buf);
     if (msg.length() >= 1 && msg[0] == 'L') {
       String cmd = msg.substring(1);
-      if (refletor(cmd)) {
-        sendAck("L" + cmd);
+      // Debounce para evitar repetição de IR causada pelo burst RF
+      unsigned long now = millis();
+      if (cmd == lastIRCmd && (now - lastIRMs) < IR_DEBOUNCE_MS) {
+        return; // ignora repetição recente
       }
+      if (refletor(cmd)) {
+        if (enableAck) sendAck("L" + cmd);
+      }
+      lastIRCmd = cmd;
+      lastIRMs = now;
     } else if (msg.length() == 7 && msg[0] == 'P') {
       bool valid = true;
       for (uint8_t i = 1; i < 7; i++) {
@@ -75,7 +92,8 @@ void loop() {
         for (uint8_t i = 0; i < 6; i++) {
           digitalWrite(RELAY_PINS[i], msg[i + 1] == '1' ? HIGH : LOW);
         }
-        sendAck(msg);
+        if (enableLogs) { Serial.print("relay state:"); Serial.println(msg); }
+        if (enableAck) sendAck(msg);
       }
     } else {
       // mensagens não reconhecidas: ignorar

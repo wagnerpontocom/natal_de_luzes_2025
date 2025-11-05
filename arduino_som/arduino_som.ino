@@ -30,6 +30,7 @@ void setVolume(int volume) {
   cmd_buf[3] = volume;
   cmd_buf[4] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 5);
+  linkMaster.print("som tx:VOL "); linkMaster.println(volume);
 }
 
 void play(int track) {
@@ -43,6 +44,7 @@ void play(int track) {
   cmd_buf[5] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 6);
   delay(100);
+  linkMaster.print("som tx:PLAY "); linkMaster.println(track);
 }
 
 void togglePlayPause() {
@@ -51,6 +53,7 @@ void togglePlayPause() {
   cmd_buf[2] = 0xA3;
   cmd_buf[3] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 4);
+  linkMaster.println("som tx:PAUSE");
 }
 
 void stop() {
@@ -59,6 +62,7 @@ void stop() {
   cmd_buf[2] = 0xA4;
   cmd_buf[3] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 4);
+  linkMaster.println("som tx:STOP");
 }
 
 void nextMusic() {
@@ -67,6 +71,7 @@ void nextMusic() {
   cmd_buf[2] = 0xA5;
   cmd_buf[3] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 4);
+  linkMaster.println("som tx:NEXT");
 }
 
 void previousMusic() {
@@ -75,6 +80,7 @@ void previousMusic() {
   cmd_buf[2] = 0xA6;
   cmd_buf[3] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 4);
+  linkMaster.println("som tx:PREV");
 }
 
 void randomMusic() {
@@ -84,6 +90,7 @@ void randomMusic() {
   cmd_buf[3] = 0x03;
   cmd_buf[4] = 0x7E;
   ArduinoMP3Shield_SendCMD(cmd_buf, 5);
+  linkMaster.println("som tx:RANDOM");
 }
 
 void log(String texto){
@@ -154,6 +161,7 @@ void loop(){
     String line = linkMaster.readStringUntil('\n');
     line.trim();
     if (line.length()==0) return;
+    linkMaster.print("som rx:"); linkMaster.println(line);
 
     String u = line;
     u.toUpperCase();

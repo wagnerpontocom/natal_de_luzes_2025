@@ -3,7 +3,7 @@
 #include <IRremote.h>
 
 const uint8_t TX_PIN = 12;
-const uint16_t BIT_RATE = 2000;
+const uint16_t BIT_RATE = 4000;
 const uint8_t IR_SEND_PIN = 9;
 const uint8_t PIR_PIN = 7;
 const uint8_t IR_RECV_PIN = 2;
@@ -19,7 +19,7 @@ int faixaMinima = 1;   // faixa mínima inclusiva para sorteio
 int faixaMaxima = 5;   // faixa máxima inclusiva para sorteio
 int ultimoSorteio = -1; // armazena o último número sorteado
 
-// ------------- RF queue com ACK -------------
+
 struct PendingRF {
   String payload;
   uint8_t retries;
@@ -98,7 +98,12 @@ void processRFQueue() {
 }
 
 bool comandoArvore(String message) {
-  return enqueueRF(message);
+  // envio direto (sem ACK), duas vezes com pequeno intervalo
+  if (enableLogs) { Serial.print("rf tx:"); Serial.println(message); }
+  bool ok = rfSendNow(message);
+  delay(7);
+  ok |= rfSendNow(message);
+  return ok;
 }
 
 bool refletorCasa(String command) {
@@ -120,16 +125,13 @@ bool refletorCasa(String command) {
   else if (s == "FADE") cmd = 0x13;
   else if (s == "SMOOTH") cmd = 0x17;
   else return false;
-  Serial.print("IR enviar -> addr=");
-  Serial.print(addr, HEX);
-  Serial.print(" cmd=");
-  Serial.println(cmd, HEX);
+  if (enableLogs) { Serial.print("ir tx:"); Serial.println(s); }
   IrSender.sendNEC(addr, (uint8_t)cmd, 0);
   return true;
 }
 
 bool refletorArvore(String command) {
-  comandoArvore("L"+command);
+  return comandoArvore("L"+command);
 }
 
 bool comandoCasa(String message) {
@@ -159,8 +161,8 @@ void setup() {
   IrSender.begin(IR_SEND_PIN);
   pinMode(PIR_PIN, INPUT);
   if (enableLogs) Serial.println("sistema iniciado");
-  if (enableLogs) Serial.println("disparado comando a para dispositivo arvore: 11000");
-  comandoArvore("11000");
+  if (enableLogs) Serial.println("disparado comando a para dispositivo arvore: P110000");
+  comandoArvore("P110000");
   Serial1.begin(115200);
   if (modoSnifferIR) {
     IrReceiver.begin(IR_RECV_PIN, ENABLE_LED_FEEDBACK);
@@ -189,8 +191,8 @@ void loop() {
     String msg = Serial.readStringUntil('\n');
     msg.trim();
     if (msg.length() > 0) {
-      if (enableLogs) { Serial.print("rf enviado: "); Serial.println(msg); }
-      sendRFMessage(msg);
+      // enviar direto para a arvore (RF burst)
+      comandoArvore(msg);
       delay(20);
     }
   }
@@ -215,29 +217,17 @@ void loop() {
       if (enableLogs) { Serial.print("numero sorteado: "); Serial.println(sorteado); }
       rotinaDeExecucao(sorteado);
     }
-    if (enableLogs) Serial.println("disparado comando a para dispositivo arvore: 01111");
-    comandoArvore("01111");
-    if (enableLogs) Serial.println("refletor: ON");
-    refletorCasa("ON");
-    delay(100);
-    if (enableLogs) Serial.println("refletor: FLASH");
-    refletorCasa("FLASH");
-    delay(3000);
-    if (enableLogs) Serial.println("refletor: OFF");
-    refletorCasa("OFF");
-    if (enableLogs) Serial.println("disparado comando a para dispositivo arvore: 11000");
-    comandoArvore("11000");
-    delay(2000);
     loggedWaiting = false;
   }
+
+
   if (pirState == LOW && lastPirState != LOW) {
     if (enableLogs) Serial.println("aguardando movimento");
     loggedWaiting = true;
   }
   lastPirState = pirState;
 
-  // processar RF (envio/ACK) e fila Serial1 a cada iteração
-  processRFQueue();
+  // processar somente fila Serial1 a cada iteração (RF direto)
   processSerial1Queue();
 }
 
@@ -293,4 +283,36 @@ void desligarEle(int idx) { if (enableLogs) { Serial.print("relay: DESLIGARELE "
 void rotinaDeExecucao(int n) {
   Serial.print("executando rotina ");
   Serial.println(n);
+
+  if (n == 1){
+    refletorArvore("ON");
+    delay(100);
+    refletorArvore("FLASH");
+    delay(100);
+    refletorArvore("OFF");
+  } else if (n == 2){
+    refletorArvore("ON");
+    delay(100);
+    refletorArvore("STROBE");
+    delay(100);
+    refletorArvore("OFF");
+  } else if (n == 3){
+    refletorArvore("ON");
+    delay(100);
+    refletorArvore("SMOOTH");
+    delay(100);
+    refletorArvore("OFF");
+  } else if (n == 4){
+    refletorArvore("ON");
+    delay(100);
+    refletorArvore("FADE");
+    delay(100);
+    refletorArvore("OFF");
+  } else if (n == 5){
+    refletorArvore("ON");
+    delay(100);
+    refletorArvore("BRILHO+");
+    delay(100);
+    refletorArvore("OFF");    
+  }
 }
