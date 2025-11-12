@@ -25,6 +25,14 @@ Firmware do dispositivo Master responsável por orquestrar os efeitos e enviar c
 - **Antena**: fio ~17,3 cm (1/4 de onda) no pino ANT do módulo
 - (Opcional) PTT: não utilizado; deixe desconectado
 
+### Botão/Chave do Modo CLI (sem resistores externos)
+- **A1 (MODE_PIN)** → Entrada com `INPUT_PULLUP`.
+- **A2 (MODE_GND_PIN)** → Saída com nível LOW.
+- **Ligação**: conecte um botão/chave entre A1 e A2.
+  - Chave ABERTA: A1 lê HIGH → Modo normal (PIR/rotinas ativas).
+  - Chave FECHADA: A1 lê LOW → Modo CLI via Serial ativado.
+  - Não conecte A2 diretamente ao GND externo (ele já fica em LOW via software).
+
 ## Tabela de Pinos (Arduino Mega)
 
 | Pino | Módulo         | Sinal/Conexão | Observações |
@@ -38,6 +46,8 @@ Firmware do dispositivo Master responsável por orquestrar os efeitos e enviar c
 | D7   | PIR HW-416      | OUT            | Aquecimento 20–60 s |
 | 5V   | PIR HW-416      | VCC            | — |
 | GND  | PIR HW-416      | GND            | — |
+| A1   | Modo CLI        | MODE_PIN       | Entrada `INPUT_PULLUP` |
+| A2   | Modo CLI        | MODE_GND_PIN   | Saída fixa em LOW |
 
 ## Arquivos
 - **arduino_master.ino**: ponto de entrada do firmware do Master.
@@ -50,6 +60,34 @@ Firmware do dispositivo Master responsável por orquestrar os efeitos e enviar c
 ### Dependências
 - RadioHead (RH_ASK) — para RF 433 MHz
 - IRremote (by Arduino-IRremote) — para transmissão IR NEC
+
+## Modo Serial CLI (quando a chave A1–A2 estiver FECHADA)
+Taxa: 9600 bps. Envie uma linha por comando (terminada em Enter):
+
+- **Árvore via RF**
+  - `ARVORE P110000` — Envia padrão P para o arduino_arvore
+  - `ARVORE LON` / `ARVORE LOFF` — Payload direto RF
+  - Qualquer linha não reconhecida cai em `comandoArvore(line)`
+
+- **Árvore via IR**
+  - `ARVORE IR ON|OFF|FLASH|STROBE|FADE|SMOOTH|R|G|B|W|BRILHO+|BRILHO-`
+
+- **Casa via IR**
+  - `CASA IR ON|OFF|FLASH|STROBE|FADE|SMOOTH|R|G|B|W|BRILHO+|BRILHO-`
+
+- **Casa (relés do arduino_som)**
+  - `CASA P101010` — Parser extrai e envia `P101010` para `comandoCasa`
+
+- **Som (Serial1)**
+  - `SOM PLAY 3`, `SOM STOP`, `SOM PAUSE`, `SOM NEXT`, `SOM PREV`, `SOM VOL 20`
+
+- **Rotina**
+  - `ROTINA 3` — Executa a rotina 3
+
+- **Faixa de sorteio**
+  - `SORTEIO 1 5` — Ajusta `faixaMinima` e `faixaMaxima`
+
+Observação: Em modo CLI, o comportamento normal (PIR/rotinas) fica pausado; a fila do som (Serial1) continua sendo processada.
 
 ## Próximas etapas
 - Ajustar taxa de bits no código se necessário (`BIT_RATE`, padrão 2000 bps).

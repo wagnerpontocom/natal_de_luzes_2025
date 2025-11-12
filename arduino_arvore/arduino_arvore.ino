@@ -57,7 +57,7 @@ void setup() {
   if (enableLogs) Serial.println("arvore iniciado");
   for (uint8_t i = 0; i < 6; i++) {
     pinMode(RELAY_PINS[i], OUTPUT);
-    digitalWrite(RELAY_PINS[i], LOW);
+    digitalWrite(RELAY_PINS[i], HIGH);
   }
   IrSender.begin(IR_SEND_PIN);
   driver.init();
@@ -90,7 +90,7 @@ void loop() {
       }
       if (valid) {
         for (uint8_t i = 0; i < 6; i++) {
-          digitalWrite(RELAY_PINS[i], msg[i + 1] == '1' ? HIGH : LOW);
+          digitalWrite(RELAY_PINS[i], msg[i + 1] == '1' ? LOW : HIGH);
         }
         if (enableLogs) { Serial.print("relay state:"); Serial.println(msg); }
         if (enableAck) sendAck(msg);

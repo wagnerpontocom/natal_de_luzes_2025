@@ -7,6 +7,8 @@ const uint16_t BIT_RATE = 4000;
 const uint8_t IR_SEND_PIN = 9;
 const uint8_t PIR_PIN = 7;
 const uint8_t IR_RECV_PIN = 2;
+const uint8_t MODE_PIN = A1;
+const uint8_t MODE_GND_PIN = A2;
 
 RH_ASK driver(BIT_RATE, 11, TX_PIN, 10, false);
 
@@ -160,6 +162,9 @@ void setup() {
   driver.init();
   IrSender.begin(IR_SEND_PIN);
   pinMode(PIR_PIN, INPUT);
+  pinMode(MODE_PIN, INPUT_PULLUP);
+  pinMode(MODE_GND_PIN, OUTPUT);
+  digitalWrite(MODE_GND_PIN, LOW);
   if (enableLogs) Serial.println("sistema iniciado");
   if (enableLogs) Serial.println("disparado comando a para dispositivo arvore: P110000");
   comandoArvore("P110000");
@@ -187,13 +192,58 @@ void loop() {
     return; // não executa o restante quando em modo sniffer
   }
 
-  if (Serial.available()) {
-    String msg = Serial.readStringUntil('\n');
-    msg.trim();
-    if (msg.length() > 0) {
-      // enviar direto para a arvore (RF burst)
-      comandoArvore(msg);
-      delay(20);
+  bool cliMode = (digitalRead(MODE_PIN) == LOW);
+  if (cliMode) {
+    if (Serial.available()) {
+      String line = Serial.readStringUntil('\n');
+      line.trim();
+      if (line.length() > 0) {
+        if (line.startsWith("ARVORE IR ")) {
+          String p = line.substring(10);
+          refletorArvore(p);
+        } else if (line.startsWith("ARVORE ")) {
+          String p = line.substring(7);
+          comandoArvore(p);
+        } else if (line.startsWith("CASA IR ")) {
+          String p = line.substring(8);
+          refletorCasa(p);
+        } else if (line.startsWith("CASA P")) {
+          // extrai somente o trecho Pxxxxxx
+          int pos = line.indexOf('P');
+          if (pos >= 0) {
+            String pmsg = line.substring(pos);
+            comandoCasa(pmsg);
+          }
+        } else if (line.startsWith("SOM ")) {
+          String p = line.substring(4);
+          enqueueSerial1(p);
+        } else if (line.startsWith("ROTINA ")) {
+          int n = line.substring(7).toInt();
+          if (n > 0) rotinaDeExecucao(n);
+        } else if (line.startsWith("SORTEIO ")) {
+          int sp = line.indexOf(' ', 8);
+          if (sp > 0) {
+            int a = line.substring(8, sp).toInt();
+            int b = line.substring(sp + 1).toInt();
+            if (a != 0 || b != 0) { faixaMinima = a; faixaMaxima = b; }
+          }
+        } else {
+          comandoArvore(line);
+        }
+        delay(10);
+      }
+    }
+    // em modo CLI, pausar comportamento normal e apenas processar fila do som
+    processSerial1Queue();
+    return;
+  } else {
+    if (Serial.available()) {
+      String msg = Serial.readStringUntil('\n');
+      msg.trim();
+      if (msg.length() > 0) {
+        comandoArvore(msg);
+        delay(20);
+      }
     }
   }
 
